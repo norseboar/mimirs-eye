@@ -5,8 +5,9 @@ from textwrap import dedent
 from dotenv import load_dotenv
 from flask import Flask, request
 from openai import OpenAI
-from readability import Document
 import requests
+
+from .scraper import get_readable_html
 
 load_dotenv()
 
@@ -18,7 +19,7 @@ GPT_FACTCHECK_ROLE = {
     "role": "system",
     "content": dedent(
         """\
-        You are a fact-checker for the anti-defamation league. Your job is
+        You are a fact-checker for a reputable news organization. Your job is
         to check other sources to see if a claim is correct or not
     """
     ),
@@ -34,13 +35,15 @@ def check_article_api():
     app.logger.info("Starting check article...")
 
     url = request.get_json().get("url")
-    html = get_article_html(url)
+    html = get_readable_html(url)
 
     app.logger.info("======\nChecking {}\n======".format(url))
 
     claims = parse_claims(html)["claims"]
 
-    checked_claims = [check_claim(c["summary"], c["query"]) for c in claims]
+    checked_claims = [
+        check_claim(c["summary"], c["query"], article_url=url) for c in claims
+    ]
     return checked_claims
 
 
@@ -122,8 +125,10 @@ def parse_claims(text):
     return result
 
 
-def check_claim(claim, query):
-    app.logger.info("Starting check claim")
+def check_claim(claim, query, article_url=None):
+    app.logger.info(
+        "Starting to check claim\nClaim: {}\nQuery: {}".format(claim, query)
+    )
 
     search_results = google_search(query)
 
@@ -134,6 +139,9 @@ def check_claim(claim, query):
     while site_check_count < SITES_CHECKED:
         site = search_results["items"][search_result_index]
         search_result_index += 1
+
+        if site["link"] == article_url:
+            continue
 
         check_site_result = check_site(claim, site["link"])
 
@@ -177,7 +185,7 @@ def google_search(query):
 
 
 def check_site(claim, url):
-    readable_html = get_article_html(url)
+    readable_html = get_readable_html(url)
 
     check_site_prompt = dedent(
         """\
@@ -225,10 +233,3 @@ def check_site(claim, url):
     result = json.loads(completion.choices[0].message.content)
     app.logger.info("Check site result for {} is {}".format(url, result))
     return result
-
-
-def get_article_html(url):
-    response = requests.get(url)
-    html = response.text
-    readable_html = Document(html).summary()
-    return readable_html
