@@ -6,6 +6,12 @@ name = "pypi"
 [packages]
 flask = "==3.0.0"
 python-dotenv = "==1.0.0"
+openai = "==1.3.5"
+google-api-python-client = "==2.108"
+beautifulsoup4 = "==4.12"
+readability-lxml = "*"
+lxml = "==4.9"
+selenium = "==4.15"
 
 [dev-packages]
 
