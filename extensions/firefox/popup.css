@@ -1,0 +1,20 @@
+html,
+body {
+  width: 400px;
+}
+
+.assessment {
+  font-weight: bold;
+}
+
+.assessment--true {
+  color: green;
+}
+
+.assessment--false {
+  color: red;
+}
+
+.assessment--unclear {
+  color: gray;
+}

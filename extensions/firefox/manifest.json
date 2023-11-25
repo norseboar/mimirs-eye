@@ -1,18 +1,20 @@
 {
   "manifest_version": 2,
-  "name": "Borderify",
+  "name": "Mimir's Eye",
   "version": "1.0",
 
   "description": "Allows fact-checking any site with Mimir's Eye",
 
   "icons": {
-    "48": "icons/border-48.png"
+    "48": "icons/mimirs-eye-48.png",
+    "96": "icons/mimirs-eye-96.png"
   },
 
-  "content_scripts": [
-    {
-      "matches": ["*://*.mozilla.org/*"],
-      "js": ["borderify.js"]
-    }
-  ]
+  "permissions": ["activeTab", "storage"],
+
+  "browser_action": {
+    "default_icon": "icons/mimirs-eye-48.png",
+    "default_title": "Mimir's Eye",
+    "default_popup": "popup.html"
+  }
 }

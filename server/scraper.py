@@ -3,14 +3,13 @@ import time
 from readability import Document
 from selenium import webdriver
 from selenium.webdriver import Chrome
-from selenium.webdriver.common.by import By
 
-SLEEP_TIME = 5
+SLEEP_TIME = 2
 
 options = webdriver.ChromeOptions()
 options.add_argument("--headless")
 
-options.page_load_strategy = "none"
+options.page_load_strategy = "eager"
 
 
 # Pass the defined options objects to initialize the web driver

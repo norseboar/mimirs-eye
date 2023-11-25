@@ -4,6 +4,7 @@ from textwrap import dedent
 
 from dotenv import load_dotenv
 from flask import Flask, request
+from flask_cors import CORS
 from openai import OpenAI
 import requests
 
@@ -12,6 +13,7 @@ from .scraper import get_readable_html
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
 GPT_MODEL = "gpt-4-1106-preview"
 
@@ -26,6 +28,11 @@ GPT_FACTCHECK_ROLE = {
 }
 
 SITES_CHECKED = 5
+
+TRUE_ASSESSMENT = "true"
+FALSE_ASSESSMENT = "false"
+UNCLEAR_ASSESSMENT = "unclear"
+NOT_FOUND_ASSESSMENT = "notfound"
 
 openai_client = OpenAI()
 
@@ -132,7 +139,7 @@ def check_claim(claim, query, article_url=None):
 
     search_results = google_search(query)
 
-    citations = {"True": [], "False": [], "Unclear": []}
+    citations = {TRUE_ASSESSMENT: [], FALSE_ASSESSMENT: [], UNCLEAR_ASSESSMENT: []}
 
     site_check_count = 0
     search_result_index = 0
@@ -152,7 +159,7 @@ def check_claim(claim, query, article_url=None):
 
         citation = {"summary": check_site_result["summary"], "link": site["link"]}
 
-        if check_site_result["assessment"] == "Not Found":
+        if check_site_result["assessment"] == NOT_FOUND_ASSESSMENT:
             continue
 
         citations[check_site_result["assessment"]].append(citation)
@@ -162,12 +169,12 @@ def check_claim(claim, query, article_url=None):
         "citations": citations,
     }
 
-    if len(citations["True"]) > 0 and len(citations["False"]) == 0:
-        check_claim_result["overallAssessment"] = "True"
-    elif len(citations["True"]) == 0 and len(citations["False"]) > 0:
-        check_claim_result["overallAssessment"] = "False"
+    if len(citations[TRUE_ASSESSMENT]) > 0 and len(citations[FALSE_ASSESSMENT]) == 0:
+        check_claim_result["overallAssessment"] = TRUE_ASSESSMENT
+    elif len(citations[TRUE_ASSESSMENT]) == 0 and len(citations[FALSE_ASSESSMENT]) > 0:
+        check_claim_result["overallAssessment"] = FALSE_ASSESSMENT
     else:
-        check_claim_result["overallAssessment"] = "Unclear"
+        check_claim_result["overallAssessment"] = UNCLEAR_ASSESSMENT
 
     return check_claim_result
 
@@ -195,31 +202,38 @@ def check_site(claim, url):
             Return a JSON object that looks like the following:
             {{
                 // This is a string, indicating your overall assessment of whether the
-                // claim is supported by the article. It can be True, False, Unclear, or
-                // Not Found.
-                // Use "True" if the article supports the claim.
-                // Use "False" if the article contradicts the claim.
-                // Use "Unclear" if the article doesn't clearly support or contradict
-                // the claim.
-                // Use "Not Found" if the article doesn't mention anything like the
-                // claim, or if the article doesn't load.
-                "assessment": "True",
+                // claim is supported by the article.
+                // Use "{true_assessment}" if the article supports the claim.
+                // Use "{false_assessment}" if the article contradicts the claim.
+                // Use "{unclear_assessment}" if the article doesn't clearly support or
+                // contradict the claim.
+                // Use "{not_found_assessment}" if the article doesn't mention anything
+                // like the claim, or if the article doesn't load.
+                "assessment": "{true_assessment}",
 
                 // A one- to two-sentence summary explaining your assessment
                 "summary": "Example text...",
 
                 // This is a boolean, indicating whether the article was successfully
-                // loaded. If it wasn't, the assessment should be "Not Found".
+                // loaded. If it wasn't, the assessment should be
+                // "{not_found_assessment}".
                 "articleLoaded": true,
             }}
 
         The claim is:
-        {}
+        {claim}
 
         The article you are checking is:
-        {}
+        {readable_html}
     """
-    ).format(claim, readable_html)
+    ).format(
+        claim=claim,
+        readable_html=readable_html,
+        true_assessment=TRUE_ASSESSMENT,
+        false_assessment=FALSE_ASSESSMENT,
+        unclear_assessment=UNCLEAR_ASSESSMENT,
+        not_found_assessment=NOT_FOUND_ASSESSMENT,
+    )
 
     completion = openai_client.chat.completions.create(
         model=GPT_MODEL,

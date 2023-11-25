@@ -12,6 +12,7 @@ beautifulsoup4 = "==4.12"
 readability-lxml = "*"
 lxml = "==4.9"
 selenium = "==4.15"
+flask-cors = "==4.0"
 
 [dev-packages]
 
